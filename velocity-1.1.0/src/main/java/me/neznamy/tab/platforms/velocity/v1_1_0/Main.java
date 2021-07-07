@@ -30,25 +30,16 @@ import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 @Plugin(id = "tab", name = "TAB", version = TAB.PLUGIN_VERSION, description = "An all-in-one solution that works", authors = {"NEZNAMY"})
 public class Main {
 
-	private static Main instance;
-	
 	//instance of proxyserver
 	private ProxyServer server;
 	
 	//metrics factory I guess
 	private Metrics.Factory metricsFactory;
 
-	//plugin message handler
-	private PluginMessageHandler plm;
-
 	@Inject
 	public Main(ProxyServer server, Metrics.Factory metricsFactory) {
 		this.server = server;
 		this.metricsFactory = metricsFactory;
-	}
-	
-	public static Main getInstance() {
-		return instance;
 	}
 
 	/**
@@ -61,17 +52,16 @@ public class Main {
 			server.getConsoleCommandSource().sendMessage(Identity.nil(), Component.text("\u00a7c[TAB] The plugin requires Velocity 1.1.0 and up to work. Get it at https://velocitypowered.com/downloads"));
 			return;
 		}
-		if (getServer().getConfiguration().isOnlineMode()) {
+		if (server.getConfiguration().isOnlineMode()) {
 			server.getConsoleCommandSource().sendMessage(Identity.nil(), Component.text("\u00a76[TAB] If you experience tablist prefix/suffix not working and global playerlist duplicating players, toggle "
 					+ "\"use-online-uuid-in-tablist\" option in config.yml (set it to opposite value)."));
 		}
-		instance = this;
-		TAB.setInstance(new TAB(new VelocityPlatform(getServer()), new VelocityPacketBuilder(), ProtocolVersion.values()[1]));
-		getServer().getEventManager().register(this, new VelocityEventListener());
+		PluginMessageHandler plm = new VelocityPluginMessageHandler(this);
+		TAB.setInstance(new TAB(new VelocityPlatform(server, plm), new VelocityPacketBuilder(), ProtocolVersion.values()[1]));
+		server.getEventManager().register(this, new VelocityEventListener(plm));
 		VelocityTABCommand cmd = new VelocityTABCommand();
-		getServer().getCommandManager().register(getServer().getCommandManager().metaBuilder("btab").build(), cmd);
-		getServer().getCommandManager().register(getServer().getCommandManager().metaBuilder("vtab").build(), cmd);
-		plm = new VelocityPluginMessageHandler(this);
+		server.getCommandManager().register(server.getCommandManager().metaBuilder("btab").build(), cmd);
+		server.getCommandManager().register(server.getCommandManager().metaBuilder("vtab").build(), cmd);
 		TAB.getInstance().load();
 		Metrics metrics = metricsFactory.make(this, 10533);
 		metrics.addCustomChart(new SimplePie("global_playerlist_enabled", () -> TAB.getInstance().getFeatureManager().isFeatureEnabled("globalplayerlist") ? "Yes" : "No"));
@@ -104,10 +94,6 @@ public class Main {
 	public static Component stringToComponent(String string) {
 		if (string == null) return null;
 		return GsonComponentSerializer.gson().deserialize(string);
-	}
-	
-	public PluginMessageHandler getPluginMessageHandler() {
-		return plm;
 	}
 
 	public ProxyServer getServer() {

@@ -4,9 +4,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import de.myzelyam.api.vanish.BungeeVanishAPI;
-import me.neznamy.tab.shared.ITabPlayer;
 import me.neznamy.tab.shared.ProtocolVersion;
 import me.neznamy.tab.shared.TAB;
+import me.neznamy.tab.shared.features.PluginMessageHandler;
+import me.neznamy.tab.shared.proxy.ProxyTabPlayer;
 import net.md_5.bungee.UserConnection;
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
@@ -19,7 +20,7 @@ import net.md_5.bungee.protocol.Protocol;
 /**
  * TabPlayer for BungeeCord
  */
-public class BungeeTabPlayer extends ITabPlayer {
+public class BungeeTabPlayer extends ProxyTabPlayer {
 	
 	//bungee internals to get player channel
 	private static Field wrapperField;
@@ -50,9 +51,9 @@ public class BungeeTabPlayer extends ITabPlayer {
 	 * Constructs new instance for given player
 	 * @param p - velocity player
 	 * @throws IllegalAccessException 
-	 * @throws IllegalArgumentException 
 	 */
-	public BungeeTabPlayer(ProxiedPlayer p) throws IllegalArgumentException, IllegalAccessException {
+	public BungeeTabPlayer(ProxiedPlayer p, PluginMessageHandler plm) throws IllegalAccessException {
+		super (plm);
 		player = p;
 		if (p.getServer() != null) {
 			world = p.getServer().getInfo().getName();
@@ -66,13 +67,7 @@ public class BungeeTabPlayer extends ITabPlayer {
 	}
 	
 	@Override
-	public boolean hasPermission(String permission) {
-		if (TAB.getInstance().getConfiguration().isBukkitPermissions()) {
-			String merge = "hasPermission:" + permission;
-			Main.getInstance().getPluginMessageHandler().requestAttribute(this, merge);
-			if (!attributes.containsKey(merge)) return false;
-			return Boolean.parseBoolean(attributes.get(merge));
-		}
+	public boolean hasPermission0(String permission) {
 		return player.hasPermission(permission);
 	}
 	
@@ -127,23 +122,7 @@ public class BungeeTabPlayer extends ITabPlayer {
 	@Override
 	public boolean isVanished() {
 		if (ProxyServer.getInstance().getPluginManager().getPlugin("PremiumVanish") != null && BungeeVanishAPI.isInvisible(player)) return true;
-		return getAttribute("vanished");
-	}
-	
-	@Override
-	public boolean isDisguised() {
-		return getAttribute("disguised");
-	}
-
-	@Override
-	public boolean hasInvisibilityPotion() {
-		return getAttribute("invisible");
-	}
-	
-	private boolean getAttribute(String name) {
-		Main.getInstance().getPluginMessageHandler().requestAttribute(this, name);
-		if (!attributes.containsKey(name)) return false;
-		return Boolean.parseBoolean(attributes.get(name));
+		return super.isVanished();
 	}
 
 	@Override

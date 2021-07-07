@@ -23,6 +23,7 @@ import me.neznamy.tab.api.ArmorStandManager;
 import me.neznamy.tab.api.TabPlayer;
 import me.neznamy.tab.platforms.bukkit.nms.NMSStorage;
 import me.neznamy.tab.shared.Property;
+import me.neznamy.tab.shared.PropertyUtils;
 import me.neznamy.tab.shared.TAB;
 import me.neznamy.tab.shared.cpu.TabFeature;
 import me.neznamy.tab.shared.cpu.UsageType;
@@ -42,7 +43,7 @@ public class NameTagX extends NameTag {
 	protected List<String> disabledUnlimitedWorlds;
 	
 	//list of defined dynamic lines
-	private List<String> dynamicLines = Arrays.asList("belowname", "nametag", "abovename");
+	private List<String> dynamicLines = Arrays.asList(PropertyUtils.BELOWNAME, PropertyUtils.NAMETAG, PropertyUtils.ABOVENAME);
 	
 	//map of defined static lines
 	private Map<String, Object> staticLines = new ConcurrentHashMap<>();
@@ -66,6 +67,8 @@ public class NameTagX extends NameTag {
 	private Map<TabPlayer, Entity> playersInVehicle = new ConcurrentHashMap<>();
 	
 	private Map<TabPlayer, Location> playerLocations = new ConcurrentHashMap<>();
+	
+	private Set<TabPlayer> playersInDisabledUnlimitedWorlds = new HashSet<>();
 
 	/**
 	 * Constructs new instance with given parameters and loads config options
@@ -80,7 +83,7 @@ public class NameTagX extends NameTag {
 		spaceBetweenLines = tab.getConfiguration().getConfig().getDouble("unlimited-nametag-prefix-suffix-mode.space-between-lines", 0.22);
 		disabledUnlimitedWorlds = tab.getConfiguration().getConfig().getStringList("disable-features-in-worlds.unlimited-nametags", Arrays.asList("disabledworld"));
 		if (tab.getConfiguration().getPremiumConfig() != null) {
-			List<String> realList = tab.getConfiguration().getPremiumConfig().getStringList("unlimited-nametag-mode-dynamic-lines", Arrays.asList("abovename", "nametag", "belowname", "another"));
+			List<String> realList = tab.getConfiguration().getPremiumConfig().getStringList("unlimited-nametag-mode-dynamic-lines", Arrays.asList(PropertyUtils.ABOVENAME, PropertyUtils.NAMETAG, PropertyUtils.BELOWNAME, "another"));
 			dynamicLines = new ArrayList<>();
 			dynamicLines.addAll(realList);
 			Collections.reverse(dynamicLines);
@@ -100,7 +103,10 @@ public class NameTagX extends NameTag {
 		for (TabPlayer all : tab.getPlayers()) {
 			getEntityIdMap().put(((Player) all.getPlayer()).getEntityId(), all);
 			loadArmorStands(all);
-			if (isDisabledWorld(all.getWorldName()) || isDisabledWorld(disabledUnlimitedWorlds, all.getWorldName())) continue;
+			if (isDisabledWorld(disabledUnlimitedWorlds, all.getWorldName())) {
+				playersInDisabledUnlimitedWorlds.add(all);
+			}
+			if (isInDisabledWorld(all)) continue;
 			loadPassengers(all);
 			for (TabPlayer viewer : tab.getPlayers()) {
 				spawnArmorStands(all, viewer, false);
@@ -114,7 +120,7 @@ public class NameTagX extends NameTag {
 		tab.getCPUManager().startRepeatingMeasuredTask(500, "refreshing nametag visibility", getFeatureType(), UsageType.REFRESHING_NAMETAG_VISIBILITY_AND_COLLISION, () -> {
 			
 			for (TabPlayer p : tab.getPlayers()) {
-				if (!p.isLoaded() || isDisabledWorld(p.getWorldName()) || isDisabledWorld(disabledUnlimitedWorlds, p.getWorldName())) continue;
+				if (!p.isLoaded() || isInDisabledWorld(p)) continue;
 				p.getArmorStandManager().updateVisibility(false);
 				if (disableOnBoats) processBoats(p);
 				
@@ -142,7 +148,7 @@ public class NameTagX extends NameTag {
 			
 			for (TabPlayer p : TAB.getInstance().getPlayers()) {
 				if (!p.isLoaded()) continue;
-				if (isDisabledWorld(p.getWorldName()) || isDisabledWorld(disabledUnlimitedWorlds, p.getWorldName())) {
+				if (isInDisabledWorld(p)) {
 					playersInVehicle.remove(p);
 					playerLocations.remove(p);
 				} else {
@@ -210,7 +216,11 @@ public class NameTagX extends NameTag {
 		super.onJoin(connectedPlayer);
 		getEntityIdMap().put(((Player) connectedPlayer.getPlayer()).getEntityId(), connectedPlayer);
 		loadArmorStands(connectedPlayer);
-		if (isDisabledWorld(connectedPlayer.getWorldName()) || isDisabledWorld(disabledUnlimitedWorlds, connectedPlayer.getWorldName())) return;
+		if (isDisabledWorld(disabledUnlimitedWorlds, connectedPlayer.getWorldName())) {
+			playersInDisabledUnlimitedWorlds.add(connectedPlayer);
+			return;
+		}
+		if (isInDisabledWorld(connectedPlayer)) return;
 		loadPassengers(connectedPlayer);
 		for (TabPlayer viewer : tab.getPlayers()) {
 			spawnArmorStands(connectedPlayer, viewer, true);
@@ -248,12 +258,18 @@ public class NameTagX extends NameTag {
 		getEntityIdMap().remove(((Player) disconnectedPlayer.getPlayer()).getEntityId());
 		playersInVehicle.remove(disconnectedPlayer);
 		playerLocations.remove(disconnectedPlayer);
+		playersInDisabledUnlimitedWorlds.remove(disconnectedPlayer);
 		tab.getCPUManager().runTaskLater(100, "processing onQuit", getFeatureType(), UsageType.PLAYER_QUIT_EVENT, () -> disconnectedPlayer.getArmorStandManager().destroy());
 	}
 
 	@Override
 	public void onWorldChange(TabPlayer p, String from, String to) {
 		super.onWorldChange(p, from, to);
+		if (isDisabledWorld(disabledWorlds, p.getWorldName())) {
+			playersInDisabledWorlds.add(p);
+		} else {
+			playersInDisabledWorlds.remove(p);
+		}
 		Set<TabPlayer> nearby = p.getArmorStandManager().getNearbyPlayers();
 		p.getArmorStandManager().destroy();
 		loadArmorStands(p);
@@ -273,7 +289,7 @@ public class NameTagX extends NameTag {
 	private void spawnArmorStands(TabPlayer owner, TabPlayer viewer, boolean sendMutually) {
 		if (owner == viewer) return; //not displaying own armorstands
 		if (((Player) viewer.getPlayer()).getWorld() != ((Player) owner.getPlayer()).getWorld()) return; //different world
-		if (isDisabledWorld(owner.getWorldName()) || isDisabledWorld(disabledUnlimitedWorlds, owner.getWorldName())) return;
+		if (isInDisabledWorld(owner)) return;
 		if (getDistance(viewer, owner) <= 48) {
 			if (((Player)viewer.getPlayer()).canSee((Player)owner.getPlayer()) && !owner.isVanished()) owner.getArmorStandManager().spawn(viewer);
 			if (sendMutually && viewer.getArmorStandManager() != null && ((Player)owner.getPlayer()).canSee((Player)viewer.getPlayer()) 
@@ -287,7 +303,7 @@ public class NameTagX extends NameTag {
 	 */
 	public void loadArmorStands(TabPlayer pl) {
 		pl.setArmorStandManager(new ArmorStandManager());
-		pl.setProperty("nametag", pl.getProperty("tagprefix").getCurrentRawValue() + pl.getProperty("customtagname").getCurrentRawValue() + pl.getProperty("tagsuffix").getCurrentRawValue());
+		pl.setProperty(PropertyUtils.NAMETAG, pl.getProperty(PropertyUtils.TAGPREFIX).getCurrentRawValue() + pl.getProperty(PropertyUtils.CUSTOMTAGNAME).getCurrentRawValue() + pl.getProperty(PropertyUtils.TAGSUFFIX).getCurrentRawValue());
 		double height = 0;
 		for (String line : dynamicLines) {
 			Property p = pl.getProperty(line);
@@ -322,7 +338,7 @@ public class NameTagX extends NameTag {
 	@Override
 	public void refresh(TabPlayer refreshed, boolean force) {
 		super.refresh(refreshed, force);
-		if (isDisabledWorld(refreshed.getWorldName()) || isDisabledWorld(disabledUnlimitedWorlds, refreshed.getWorldName())) return;
+		if (isInDisabledWorld(refreshed)) return;
 		if (force) {
 			refreshed.getArmorStandManager().destroy();
 			loadArmorStands(refreshed);
@@ -352,13 +368,13 @@ public class NameTagX extends NameTag {
 	@Override
 	public void updateProperties(TabPlayer p) {
 		super.updateProperties(p);
-		p.loadPropertyFromConfig("customtagname", p.getName());
-		p.setProperty("nametag", p.getProperty("tagprefix").getCurrentRawValue() + p.getProperty("customtagname").getCurrentRawValue() + p.getProperty("tagsuffix").getCurrentRawValue());
+		p.loadPropertyFromConfig(PropertyUtils.CUSTOMTAGNAME, p.getName());
+		p.setProperty(PropertyUtils.NAMETAG, p.getProperty(PropertyUtils.TAGPREFIX).getCurrentRawValue() + p.getProperty(PropertyUtils.CUSTOMTAGNAME).getCurrentRawValue() + p.getProperty(PropertyUtils.TAGSUFFIX).getCurrentRawValue());
 		for (String property : dynamicLines) {
-			if (!property.equals("nametag")) p.loadPropertyFromConfig(property);
+			if (!property.equals(PropertyUtils.NAMETAG)) p.loadPropertyFromConfig(property);
 		}
 		for (String property : staticLines.keySet()) {
-			if (!property.equals("nametag")) p.loadPropertyFromConfig(property);
+			if (!property.equals(PropertyUtils.NAMETAG)) p.loadPropertyFromConfig(property);
 		}
 	}
 
@@ -382,7 +398,7 @@ public class NameTagX extends NameTag {
 
 	@Override
 	public void refreshUsedPlaceholders() {
-		usedPlaceholders = new HashSet<>(tab.getConfiguration().getConfig().getUsedPlaceholderIdentifiersRecursive("tagprefix", "customtagname", "tagsuffix"));
+		usedPlaceholders = new HashSet<>(tab.getConfiguration().getConfig().getUsedPlaceholderIdentifiersRecursive(PropertyUtils.TAGPREFIX, PropertyUtils.CUSTOMTAGNAME, PropertyUtils.TAGSUFFIX));
 		for (String line : dynamicLines) {
 			usedPlaceholders.addAll(tab.getConfiguration().getConfig().getUsedPlaceholderIdentifiersRecursive(line));
 		}
@@ -390,9 +406,9 @@ public class NameTagX extends NameTag {
 			usedPlaceholders.addAll(tab.getConfiguration().getConfig().getUsedPlaceholderIdentifiersRecursive(line));
 		}
 		for (TabPlayer p : tab.getPlayers()) {
-			usedPlaceholders.addAll(tab.getPlaceholderManager().getUsedPlaceholderIdentifiersRecursive(p.getProperty("tagprefix").getCurrentRawValue(), 
-					p.getProperty("customtagname").getCurrentRawValue(), p.getProperty("tagsuffix").getCurrentRawValue(),
-					p.getProperty("abovename").getCurrentRawValue(), p.getProperty("belowname").getCurrentRawValue()));
+			usedPlaceholders.addAll(tab.getPlaceholderManager().getUsedPlaceholderIdentifiersRecursive(p.getProperty(PropertyUtils.TAGPREFIX).getCurrentRawValue(), 
+					p.getProperty(PropertyUtils.CUSTOMTAGNAME).getCurrentRawValue(), p.getProperty(PropertyUtils.TAGSUFFIX).getCurrentRawValue(),
+					p.getProperty(PropertyUtils.ABOVENAME).getCurrentRawValue(), p.getProperty(PropertyUtils.BELOWNAME).getCurrentRawValue()));
 		}
 	}
 
@@ -404,7 +420,7 @@ public class NameTagX extends NameTag {
 	@Override
 	public boolean getTeamVisibility(TabPlayer p, TabPlayer viewer) {
 		//only visible if player is on boat & config option is enabled and player is not invisible (1.8 bug) or feature is disabled
-		return (getPlayersOnBoats().contains(p) && !invisiblePlayers.contains(p.getName())) || isDisabledWorld(disabledUnlimitedWorlds, p.getWorldName());
+		return (getPlayersOnBoats().contains(p) && !invisiblePlayers.contains(p.getName())) || isInDisabledWorld(p);
 	}
 
 	public Map<Integer, TabPlayer> getEntityIdMap() {
@@ -417,5 +433,9 @@ public class NameTagX extends NameTag {
 
 	public List<TabPlayer> getPlayersOnBoats() {
 		return playersOnBoats;
+	}
+	
+	public boolean isInDisabledWorld(TabPlayer p) {
+		return playersInDisabledWorlds.contains(p) || isDisabledWorld(disabledUnlimitedWorlds, p.getWorldName());
 	}
 }
