@@ -1,4 +1,4 @@
-package me.neznamy.tab.platforms.velocity.v1_1_0;
+package me.neznamy.tab.platforms.velocity.v3_0_0;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -100,7 +100,7 @@ public class VelocityTabPlayer extends ProxyTabPlayer {
 	}
 	
 	private void handle(PacketPlayOutPlayerListHeaderFooter packet) {
-		player.getTabList().setHeaderAndFooter(Main.stringToComponent(packet.getHeader().toString(getVersion())), Main.stringToComponent(packet.getFooter().toString(getVersion())));
+		player.sendPlayerListHeaderAndFooter(Main.stringToComponent(packet.getHeader().toString(getVersion())), Main.stringToComponent(packet.getFooter().toString(getVersion())));
 	}
 	
 	private void handle(PacketPlayOutBoss packet) {
@@ -124,7 +124,7 @@ public class VelocityTabPlayer extends ProxyTabPlayer {
 			bossbars.remove(packet.getId());
 			break;
 		case UPDATE_PCT:
-			bossbars.get(packet.getId()).percent(packet.getPct());
+			bossbars.get(packet.getId()).progress(packet.getPct());
 			break;
 		case UPDATE_NAME:
 			bossbars.get(packet.getId()).name(Main.stringToComponent(IChatBaseComponent.optimizedComponent(packet.getName()).toString(getVersion())));

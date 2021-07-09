@@ -1,4 +1,4 @@
-package me.neznamy.tab.platforms.velocity.v1_1_0;
+package me.neznamy.tab.platforms.velocity.v3_0_0;
 
 import java.util.ArrayList;
 import java.util.List;
