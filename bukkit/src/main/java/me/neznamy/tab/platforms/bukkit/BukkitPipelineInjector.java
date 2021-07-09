@@ -101,12 +101,12 @@ public class BukkitPipelineInjector extends PipelineInjector {
 					tab.getFeatureManager().onObjective(player, packet);
 				}
 				tab.getFeatureManager().onPacketSend(player, packet);
-			} catch (Exception e){
+			} catch (Throwable e){
 				tab.getErrorManager().printError("An error occurred when reading packets", e);
 			}
 			try {
 				super.write(context, packet, channelPromise);
-			} catch (Exception e) {
+			} catch (Throwable e) {
 				tab.getErrorManager().printError("Failed to forward packet " + packet.getClass().getSimpleName() + " to " + player.getName(), e);
 			}
 		}
@@ -131,7 +131,7 @@ public class BukkitPipelineInjector extends PipelineInjector {
 					continue;
 				}
 				if (!tab.getFeatureManager().getNameTagFeature().getPlayersInDisabledWorlds().contains(p) && !p.hasTeamHandlingPaused() && 
-						!p.getTeamName().equals(teamName)) {
+						!teamName.equals(p.getTeamName())) {
 					logTeamOverride(teamName, entry);
 				} else {
 					newList.add(entry);
