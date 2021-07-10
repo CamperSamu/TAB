@@ -1,5 +1,6 @@
 package me.neznamy.tab.platforms.velocity.v3_0_0;
 
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,6 +16,7 @@ import com.velocitypowered.api.proxy.player.TabListEntry;
 import com.velocitypowered.api.util.GameProfile;
 import com.velocitypowered.api.util.GameProfile.Property;
 
+import io.netty.channel.Channel;
 import me.neznamy.tab.shared.ProtocolVersion;
 import me.neznamy.tab.shared.TAB;
 import me.neznamy.tab.shared.features.PluginMessageHandler;
@@ -50,7 +52,7 @@ public class VelocityTabPlayer extends ProxyTabPlayer {
 	 * Constructs new instance for given player
 	 * @param p - velocity player
 	 */
-	public VelocityTabPlayer(Player p, PluginMessageHandler plm) {
+	public VelocityTabPlayer(Player p, PluginMessageHandler plm) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
 		super(plm);
 		player = p;
 		Optional<ServerConnection> server = p.getCurrentServer();
@@ -60,6 +62,8 @@ public class VelocityTabPlayer extends ProxyTabPlayer {
 			//tab reload while a player is connecting, how unfortunate
 			world = "<null>";
 		}
+		Object minecraftConnection = player.getClass().getMethod("getConnection").invoke(player);
+		channel = (Channel) minecraftConnection.getClass().getMethod("getChannel").invoke(minecraftConnection);
 		name = p.getUsername();
 		uniqueId = p.getUniqueId();
 		UUID offlineId = UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(StandardCharsets.UTF_8));
@@ -81,18 +85,19 @@ public class VelocityTabPlayer extends ProxyTabPlayer {
 	@Override
 	public void sendPacket(Object packet) {
 		if (packet == null || !player.isActive()) return;
-		if (packet instanceof PacketPlayOutChat){
+		if (packet instanceof PacketPlayOutChat) {
 			handle((PacketPlayOutChat) packet);
+			return;
 		}
 		if (packet instanceof PacketPlayOutPlayerListHeaderFooter) {
 			handle((PacketPlayOutPlayerListHeaderFooter) packet);
+			return;
 		}
 		if (packet instanceof PacketPlayOutBoss) {
 			handle((PacketPlayOutBoss) packet);
+			return;
 		}
-		if (packet instanceof PacketPlayOutPlayerInfo) {
-			handle((PacketPlayOutPlayerInfo) packet);
-		}
+		channel.writeAndFlush(packet, channel.voidPromise());
 	}
 
 	private void handle(PacketPlayOutChat packet) {
@@ -142,43 +147,6 @@ public class VelocityTabPlayer extends ProxyTabPlayer {
 			break;
 		default:
 			break;
-		}
-	}
-	
-	@SuppressWarnings("unchecked")
-	private void handle(PacketPlayOutPlayerInfo packet) {
-		for (PlayerInfoData data : packet.getEntries()) {
-			switch (packet.getAction()) {
-			case ADD_PLAYER:
-				player.getTabList().addEntry(TabListEntry.builder()
-						.tabList(player.getTabList())
-						.displayName(data.getDisplayName() == null ? null : Main.stringToComponent(data.getDisplayName().toString(getVersion())))
-						.gameMode(data.getGameMode().ordinal()-1)
-						.profile(new GameProfile(data.getUniqueId(), data.getName(), (List<Property>) data.getSkin()))
-						.latency(data.getLatency())
-						.build());
-				break;
-			case REMOVE_PLAYER:
-				player.getTabList().removeEntry(data.getUniqueId());
-				break;
-			case UPDATE_DISPLAY_NAME:
-				for (TabListEntry entry : player.getTabList().getEntries()) {
-					if (entry.getProfile().getId().equals(data.getUniqueId())) entry.setDisplayName(data.getDisplayName() == null ? null : Main.stringToComponent(data.getDisplayName().toString(getVersion())));
-				}
-				break;
-			case UPDATE_LATENCY:
-				for (TabListEntry entry : player.getTabList().getEntries()) {
-					if (entry.getProfile().getId().equals(data.getUniqueId())) entry.setLatency(data.getLatency());
-				}
-				break;
-			case UPDATE_GAME_MODE:
-				for (TabListEntry entry : player.getTabList().getEntries()) {
-					if (entry.getProfile().getId().equals(data.getUniqueId())) entry.setGameMode(data.getGameMode().ordinal()-1);
-				}
-				break;
-			default:
-				break;
-			}
 		}
 	}
 	

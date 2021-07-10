@@ -3,6 +3,7 @@ package me.neznamy.tab.platforms.velocity.v3_0_0;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.github.NEZNAMY.VelocityPacketRegistry;
 import org.bstats.charts.SimplePie;
 import org.bstats.velocity.Metrics;
 
@@ -50,6 +51,10 @@ public class Main {
 	public void onProxyInitialization(ProxyInitializeEvent event) {
 		if (!isVersionSupported()) {
 			server.getConsoleCommandSource().sendMessage(Identity.nil(), Component.text("\u00a7c[TAB] The plugin requires Velocity 1.1.0 and up to work. Get it at https://velocitypowered.com/downloads"));
+			return;
+		}
+		if (!new VelocityPacketRegistry().registerPackets()) {
+			System.out.println("\u00a7c[TAB] Your velocity version is way too new for this plugin version. Update the plugin or downgrade Velocity.");
 			return;
 		}
 		if (server.getConfiguration().isOnlineMode()) {

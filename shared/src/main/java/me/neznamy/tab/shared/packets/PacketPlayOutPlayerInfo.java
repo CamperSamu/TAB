@@ -50,7 +50,7 @@ public class PacketPlayOutPlayerInfo extends UniversalPacketPlayOut {
 	 * @throws InstantiationException 
 	 */
 	@Override
-	protected Object build(ProtocolVersion clientVersion) throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException, NegativeArraySizeException {
+	protected Object build(ProtocolVersion clientVersion) throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException, NegativeArraySizeException, ClassNotFoundException {
 		return TAB.getInstance().getPacketBuilder().build(this, clientVersion);
 	}
 

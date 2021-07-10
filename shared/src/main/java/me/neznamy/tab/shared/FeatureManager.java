@@ -154,7 +154,7 @@ public class FeatureManager {
 	 * @throws InvocationTargetException 
 	 * @throws IllegalAccessException 
 	 */
-	public Object onPacketPlayOutPlayerInfo(TabPlayer receiver, Object packet) throws IllegalAccessException, InvocationTargetException {
+	public Object onPacketPlayOutPlayerInfo(TabPlayer receiver, Object packet) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
 		if (receiver.getVersion().getMinorVersion() < 8) return packet;
 		List<PlayerInfoPacketListener> listeners = new ArrayList<>();
 		for (Feature f : getAllFeatures()) {

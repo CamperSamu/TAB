@@ -22,7 +22,7 @@ public abstract class UniversalPacketPlayOut {
 	 * @throws SecurityException 
 	 * @throws NoSuchMethodException 
 	 */
-	protected abstract Object build(ProtocolVersion clientVersion) throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException, NegativeArraySizeException;
+	protected abstract Object build(ProtocolVersion clientVersion) throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException, NegativeArraySizeException, ClassNotFoundException;
 	
 	/**
 	 * Calls build(...) and wraps it into a try/catch

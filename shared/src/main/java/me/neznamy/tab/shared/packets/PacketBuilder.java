@@ -45,7 +45,7 @@ public interface PacketBuilder {
 	 * @throws IllegalAccessException 
 	 * @throws InstantiationException 
 	 */
-	public Object build(PacketPlayOutPlayerInfo packet, ProtocolVersion clientVersion) throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException, NegativeArraySizeException;
+	public Object build(PacketPlayOutPlayerInfo packet, ProtocolVersion clientVersion) throws InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException, NegativeArraySizeException, ClassNotFoundException;
 	
 	/**
 	 * Constructs platform-specific PacketPlayOutPlayerListHeaderFooter class based on custom packet class
@@ -148,7 +148,7 @@ public interface PacketBuilder {
 	 * @throws InvocationTargetException 
 	 * @throws IllegalAccessException 
 	 */
-	public PacketPlayOutPlayerInfo readPlayerInfo(Object packet, ProtocolVersion clientVersion) throws IllegalAccessException, InvocationTargetException;
+	public PacketPlayOutPlayerInfo readPlayerInfo(Object packet, ProtocolVersion clientVersion) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException;
 	
 	/**
 	 * Converts platform-specific instance of objective packet into custom class object
