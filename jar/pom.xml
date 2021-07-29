@@ -21,7 +21,6 @@
 						<includes>
 							<include>com.googlecode.json-simple:json-simple</include>
 							<include>com.github.NEZNAMY:YamlAssist</include>
-							<include>com.github.NEZNAMY:VelocityPacketInjector</include>
 							<include>org.bstats:*</include>
 							<include>me.neznamy:*</include>
 						</includes>

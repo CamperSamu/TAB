@@ -60,34 +60,16 @@
 					<artifactId>configurate-hocon</artifactId>
 				</exclusion>
 				<exclusion>
-					<groupId>com.mojang</groupId>
-					<artifactId>brigadier</artifactId>
-				</exclusion>
-				<exclusion>
 					<groupId>org.spongepowered</groupId>
 					<artifactId>configurate-yaml</artifactId>
 				</exclusion>
 				<exclusion>
 					<groupId>net.kyori</groupId>
-					<artifactId>
-						adventure-text-serializer-legacy-text3
-					</artifactId>
+					<artifactId>adventure-text-serializer-legacy</artifactId>
 				</exclusion>
 				<exclusion>
 					<groupId>net.kyori</groupId>
-					<artifactId>
-						adventure-text-serializer-legacy
-					</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>net.kyori</groupId>
-					<artifactId>
-						adventure-text-serializer-plain
-					</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>net.kyori</groupId>
-					<artifactId>text-serializer-plain</artifactId>
+					<artifactId>adventure-text-serializer-plain</artifactId>
 				</exclusion>
 				<exclusion>
 					<groupId>org.codehaus.mojo</groupId>
@@ -106,16 +88,8 @@
 					<artifactId>error_prone_annotations</artifactId>
 				</exclusion>
 				<exclusion>
-					<groupId>net.kyori</groupId>
-					<artifactId>text-serializer-legacy</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>net.kyori</groupId>
-					<artifactId>text-serializer-gson</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>net.kyori</groupId>
-					<artifactId>examination-string</artifactId>
+					<groupId>com.velocitypowered</groupId>
+					<artifactId>velocity-brigadier</artifactId>
 				</exclusion>
 				<exclusion>
 					<groupId>aopalliance</groupId>
@@ -140,11 +114,15 @@
 		<dependency>
 			<groupId>com.github.NEZNAMY</groupId>
 			<artifactId>VelocityPacketInjector</artifactId>
-			<version>1.0.1</version>
+			<version>1.1.0</version>
 			<exclusions>
 				<exclusion>
 					<groupId>io.netty</groupId>
-					<artifactId>netty-all</artifactId>
+					<artifactId>netty-buffer</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>io.netty</groupId>
+					<artifactId>netty-common</artifactId>
 				</exclusion>
 			</exclusions>
 		</dependency>

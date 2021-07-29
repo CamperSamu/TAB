@@ -2,8 +2,8 @@ package me.neznamy.tab.platforms.velocity.v3_0_0;
 
 import com.velocitypowered.proxy.protocol.packet.ScoreboardDisplay;
 import com.velocitypowered.proxy.protocol.packet.ScoreboardObjective;
-import com.velocitypowered.proxy.protocol.packet.ScoreboardScore;
-import com.velocitypowered.proxy.protocol.packet.Team;
+import com.velocitypowered.proxy.protocol.packet.ScoreboardSetScore;
+import com.velocitypowered.proxy.protocol.packet.ScoreboardTeam;
 import me.neznamy.tab.shared.ProtocolVersion;
 import me.neznamy.tab.shared.packets.*;
 import me.neznamy.tab.shared.packets.PacketPlayOutPlayerInfo.EnumPlayerInfoAction;
@@ -67,7 +67,7 @@ public class VelocityPacketBuilder implements PacketBuilder {
 
 	@Override
 	public Object build(PacketPlayOutScoreboardScore packet, ProtocolVersion clientVersion) {
-		return new ScoreboardScore(packet.getPlayer(), (byte) packet.getAction().ordinal(), packet.getObjectiveName(), packet.getScore());
+		return new ScoreboardSetScore(packet.getPlayer(), (byte) packet.getAction().ordinal(), packet.getObjectiveName(), packet.getScore());
 	}
 
 	@Override
@@ -76,9 +76,9 @@ public class VelocityPacketBuilder implements PacketBuilder {
 		if (clientVersion.getMinorVersion() >= 13) {
 			color = (packet.getColor() != null ? packet.getColor() : EnumChatFormat.lastColorsOf(packet.getPlayerPrefix())).getNetworkId();
 		}
-		return new Team(packet.getName(), (byte)packet.getMethod(), jsonOrCut(packet.getName(), clientVersion, 16), jsonOrCut(packet.getPlayerPrefix(),
+		return new ScoreboardTeam(packet.getName(), (byte)packet.getMethod(), jsonOrCut(packet.getName(), clientVersion, 16), jsonOrCut(packet.getPlayerPrefix(),
 				clientVersion, 16), jsonOrCut(packet.getPlayerSuffix(), clientVersion, 16), packet.getNametagVisibility(),
-				packet.getCollisionRule(), color, (byte)packet.getOptions(), packet.getPlayers().toArray(new String[0]));
+				packet.getCollisionRule(), color, (byte)packet.getOptions(), new ArrayList<>(packet.getPlayers()));
 	}
 
 	@Override
@@ -105,16 +105,16 @@ public class VelocityPacketBuilder implements PacketBuilder {
 		ScoreboardObjective newPacket = (ScoreboardObjective) packet;
 		String title;
 		if (clientVersion.getMinorVersion() >= 13) {
-			title = newPacket.value == null ? null : IChatBaseComponent.fromString(newPacket.value).toLegacyText();
+			title = newPacket.getValue() == null ? null : IChatBaseComponent.fromString(newPacket.getValue()).toLegacyText();
 		} else {
-			title = newPacket.value;
+			title = newPacket.getValue();
 		}
-		EnumScoreboardHealthDisplay renderType = (newPacket.type == null ? null : EnumScoreboardHealthDisplay.valueOf(newPacket.type.toString().toUpperCase()));
-		return new PacketPlayOutScoreboardObjective(newPacket.action, newPacket.name, title, renderType);
+		EnumScoreboardHealthDisplay renderType = (newPacket.getType() == null ? null : EnumScoreboardHealthDisplay.valueOf(newPacket.getType().toString().toUpperCase()));
+		return new PacketPlayOutScoreboardObjective(newPacket.getAction(), newPacket.getName(), title, renderType);
 	}
 
 	@Override
 	public PacketPlayOutScoreboardDisplayObjective readDisplayObjective(Object packet, ProtocolVersion clientVersion) {
-		return new PacketPlayOutScoreboardDisplayObjective(((ScoreboardDisplay) packet).position, ((ScoreboardDisplay) packet).name);
+		return new PacketPlayOutScoreboardDisplayObjective(((ScoreboardDisplay) packet).getPosition(), ((ScoreboardDisplay) packet).getName());
 	}
 }

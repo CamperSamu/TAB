@@ -1,9 +1,10 @@
 package me.neznamy.tab.platforms.velocity.v3_0_0;
 
 import java.util.Collection;
+import java.util.List;
 
 import com.google.common.collect.Lists;
-import com.velocitypowered.proxy.protocol.packet.Team;
+import com.velocitypowered.proxy.protocol.packet.ScoreboardTeam;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -63,9 +64,9 @@ public class VelocityPipelineInjector extends PipelineInjector {
                     case "PlayerListItem":
                         super.write(context, tab.getFeatureManager().onPacketPlayOutPlayerInfo(player, packet), channelPromise);
                         return;
-                    case "Team":
+                    case "ScoreboardTeam":
                         if (tab.getFeatureManager().isFeatureEnabled("nametag16") && antiOverrideTeams) {
-                            modifyPlayers((Team) packet);
+                            modifyPlayers((ScoreboardTeam) packet);
                         }
                         break;
                     case "JoinGame":
@@ -92,18 +93,18 @@ public class VelocityPipelineInjector extends PipelineInjector {
          * Removes all real players from packet if the packet doesn't come from TAB
          * @param packet - packet to modify
          */
-        private void modifyPlayers(Team packet){
+        private void modifyPlayers(ScoreboardTeam packet) {
             long time = System.nanoTime();
-            if (packet.players == null) return;
-            Collection<String> col = Lists.newArrayList(packet.getPlayers());
+            if (packet.getPlayers() == null) return;
+            List<String> col = Lists.newArrayList(packet.getPlayers());
             for (TabPlayer p : tab.getPlayers()) {
                 if (col.contains(p.getName()) && !tab.getFeatureManager().getNameTagFeature().getPlayersInDisabledWorlds().contains(p)
-                    && !p.hasTeamHandlingPaused() && !packet.name.equals(p.getTeamName())) {
-                    logTeamOverride(packet.name, p.getName());
+                    && !p.hasTeamHandlingPaused() && !packet.getName().equals(p.getTeamName())) {
+                    logTeamOverride(packet.getName(), p.getName());
                     col.remove(p.getName());
                 }
             }
-            packet.players = col.toArray(new String[0]);
+            packet.setPlayers(col);
             tab.getCPUManager().addTime(TabFeature.NAMETAGS, UsageType.ANTI_OVERRIDE, System.nanoTime()-time);
         }
     }

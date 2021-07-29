@@ -3,7 +3,6 @@ package me.neznamy.tab.platforms.velocity.v3_0_0;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.github.NEZNAMY.VelocityPacketRegistry;
 import org.bstats.charts.SimplePie;
 import org.bstats.velocity.Metrics;
 
@@ -13,6 +12,7 @@ import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
+import com.velocitypowered.api.plugin.Dependency;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
@@ -28,7 +28,9 @@ import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 /**
  * Main class for Velocity platform
  */
-@Plugin(id = "tab", name = "TAB", version = TAB.PLUGIN_VERSION, description = "An all-in-one solution that works", authors = {"NEZNAMY"})
+@Plugin(id = "tab", name = "TAB", version = TAB.PLUGIN_VERSION,
+		description = "An all-in-one solution that works", authors = {"NEZNAMY"},
+		dependencies = {@Dependency(id = "velocitypacketinjector")})
 public class Main {
 
 	//instance of proxyserver
@@ -51,10 +53,6 @@ public class Main {
 	public void onProxyInitialization(ProxyInitializeEvent event) {
 		if (!isVersionSupported()) {
 			server.getConsoleCommandSource().sendMessage(Identity.nil(), Component.text("\u00a7c[TAB] The plugin requires Velocity 1.1.0 and up to work. Get it at https://velocitypowered.com/downloads"));
-			return;
-		}
-		if (!new VelocityPacketRegistry().registerPackets()) {
-			System.out.println("\u00a7c[TAB] Your velocity version is way too new for this plugin version. Update the plugin or downgrade Velocity.");
 			return;
 		}
 		if (server.getConfiguration().isOnlineMode()) {
