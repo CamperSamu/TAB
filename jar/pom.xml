@@ -79,7 +79,7 @@
 		</dependency>
 		<dependency>
 			<groupId>me.neznamy</groupId>
-			<artifactId>velocity-3.0.0</artifactId>
+			<artifactId>velocity</artifactId>
 			<version>${project.version}</version>
 			<exclusions>
 				<exclusion>

@@ -1,6 +1,5 @@
-package me.neznamy.tab.platforms.velocity.v3_0_0;
+package me.neznamy.tab.platforms.velocity;
 
-import java.util.Collection;
 import java.util.List;
 
 import com.google.common.collect.Lists;

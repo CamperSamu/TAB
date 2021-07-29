@@ -1,4 +1,4 @@
-package me.neznamy.tab.platforms.velocity.v3_0_0;
+package me.neznamy.tab.platforms.velocity;
 
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;

@@ -1,4 +1,4 @@
-package me.neznamy.tab.platforms.velocity.v3_0_0;
+package me.neznamy.tab.platforms.velocity;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
