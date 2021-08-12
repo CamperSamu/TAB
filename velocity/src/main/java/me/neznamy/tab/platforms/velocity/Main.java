@@ -3,6 +3,7 @@ package me.neznamy.tab.platforms.velocity;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.velocitypowered.api.util.ProxyVersion;
 import org.bstats.charts.SimplePie;
 import org.bstats.velocity.Metrics;
 
@@ -34,10 +35,10 @@ import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 public class Main {
 
 	//instance of proxyserver
-	private ProxyServer server;
+	private final ProxyServer server;
 	
 	//metrics factory I guess
-	private Metrics.Factory metricsFactory;
+	private final Metrics.Factory metricsFactory;
 
 	@Inject
 	public Main(ProxyServer server, Metrics.Factory metricsFactory) {
@@ -52,7 +53,7 @@ public class Main {
 	@Subscribe
 	public void onProxyInitialization(ProxyInitializeEvent event) {
 		if (!isVersionSupported()) {
-			server.getConsoleCommandSource().sendMessage(Identity.nil(), Component.text("\u00a7c[TAB] The plugin requires Velocity 1.1.0 and up to work. Get it at https://velocitypowered.com/downloads"));
+			server.getConsoleCommandSource().sendMessage(Identity.nil(), Component.text("\u00a7c[TAB] The plugin requires Velocity 3.0.0 and up to work. Get it at https://velocitypowered.com/downloads"));
 			return;
 		}
 		if (server.getConfiguration().isOnlineMode()) {
@@ -76,13 +77,7 @@ public class Main {
 	 * @return true if version is compatible, false if not
 	 */
 	private boolean isVersionSupported() {
-		try {
-			Class.forName("org.yaml.snakeyaml.Yaml"); //1.1.0+
-			Class.forName("net.kyori.adventure.identity.Identity"); //1.1.0 b265
-			return true;
-		} catch (Exception e) {
-			return false;
-		}
+		return server.getVersion().getVersion().startsWith("3.");
 	}
 	
 	/**
