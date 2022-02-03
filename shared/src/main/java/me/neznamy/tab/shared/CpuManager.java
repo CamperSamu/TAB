@@ -6,7 +6,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -42,8 +41,12 @@ public class CpuManager implements ThreadManager {
 	//packets sent in the previous 10 seconds
 	private Map<String, AtomicInteger> packetsPrevious = new ConcurrentHashMap<>();
 
-	//thread pool
-	private ThreadPoolExecutor exe = (ThreadPoolExecutor) Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("TAB - Thread %d").build());
+	//thread pools
+	private ExecutorService thread = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("TAB Processing Thread").build());
+	private final ExecutorService threadPool = Executors.newCachedThreadPool();
+
+	private final Map<Runnable, String> taskQueue = new HashMap<>();
+	private boolean enabled = false;
 
 	//error manager
 	private final ErrorManager errorManager;
@@ -77,25 +80,29 @@ public class CpuManager implements ThreadManager {
 	}
 
 	/**
-	 * Returns amount of active and total threads
-	 * @return active and total threads from this thread pool
-	 */
-	public String getThreadCount() {
-		return exe.getActiveCount() + "/" + exe.getPoolSize();
-	}
-
-	/**
 	 * Cancels all tasks, new instance is set to avoid errors when starting tasks on shutdown (such as packet readers)
 	 */
 	public void cancelAllTasks() {
 		//preventing errors when tasks are inserted while shutting down
-		ExecutorService old = exe;
-		exe = (ThreadPoolExecutor) Executors.newCachedThreadPool();
+		ExecutorService old = thread;
+		thread = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("TAB Processing Thread").build());
 		old.shutdownNow();
+		threadPool.shutdownNow();
+	}
+
+	public void enable() {
+		enabled = true;
+		taskQueue.forEach((r, e) -> submit(e, r));
+		taskQueue.clear();
 	}
 
 	@Override
 	public Future<Void> runMeasuredTask(String errorDescription, TabFeature feature, String type, Runnable task) {
+		return runMeasuredTask(errorDescription, feature.getFeatureName(), type, task);
+	}
+
+	@Override
+	public Future<Void> runMeasuredTask(String errorDescription, String feature, String type, Runnable task) {
 		return submit(errorDescription, () -> {
 			long time = System.nanoTime();
 			task.run();
@@ -110,34 +117,27 @@ public class CpuManager implements ThreadManager {
 
 	@Override
 	public RepeatingTask startRepeatingMeasuredTask(int intervalMilliseconds, String errorDescription, TabFeature feature, String type, Runnable task) {
-		return new TabRepeatingTask(exe, task, errorDescription, feature, type, intervalMilliseconds);
+		return new TabRepeatingTask(threadPool, task, errorDescription, feature, type, intervalMilliseconds);
 	}
 
 	@Override
-	public Future<Void> runTaskLater(int delayMilliseconds, String errorDescription, TabFeature feature, String type, Runnable task) {
-		return runTaskLater(delayMilliseconds, errorDescription, feature.getFeatureName(), type, task);
-	}
-	
-	@Override
-	public Future<Void> runTaskLater(int delayMilliseconds, String errorDescription, String feature, String type, Runnable task) {
-		return submit(errorDescription, () -> {
+	public Future<?> runTaskLater(int delayMilliseconds, String errorDescription, TabFeature feature, String type, Runnable task) {
+		return threadPool.submit(() -> {
 			try {
 				Thread.sleep(delayMilliseconds);
-				long time = System.nanoTime();
-				task.run();
-				addTime(feature, type, System.nanoTime()-time);
+				runMeasuredTask(errorDescription, feature, type, task);
 			} catch (InterruptedException pluginDisabled) {
 				Thread.currentThread().interrupt();
 			}
 		});
 	}
-	
+
 	@Override
-	public Future<Void> runTaskLater(int delayMilliseconds, String errorDescription, Runnable task) {
-		return submit(errorDescription, () -> {
+	public Future<?> runTaskLater(int delayMilliseconds, String errorDescription, Runnable task) {
+		return threadPool.submit(() -> {
 			try {
 				Thread.sleep(delayMilliseconds);
-				task.run();
+				submit(errorDescription, task);
 			} catch (InterruptedException pluginDisabled) {
 				Thread.currentThread().interrupt();
 			}
@@ -146,10 +146,14 @@ public class CpuManager implements ThreadManager {
 	
 	@SuppressWarnings("unchecked")
 	private Future<Void> submit(String errorDescription, Runnable task) {
-		return (Future<Void>) exe.submit(() -> {
+		if (!enabled) {
+			taskQueue.put(task, errorDescription);
+			return null;
+		}
+		return (Future<Void>) thread.submit(() -> {
 			try {
 				task.run();
-			} catch (Exception | NoClassDefFoundError e) {
+			} catch (Exception | LinkageError e) {
 				errorManager.printError("An error occurred when " + errorDescription, e);
 			}
 		});

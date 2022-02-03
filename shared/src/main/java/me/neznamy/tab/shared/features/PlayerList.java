@@ -39,7 +39,7 @@ public class PlayerList extends TabFeature implements TablistFormatManager {
 			if (isDisabled(all.getServer(), all.getWorld())) {
 				addDisabledPlayer(all);
 				updateProperties(all);
-				return;
+				continue;
 			}
 			refresh(all, true);
 		}
@@ -62,7 +62,10 @@ public class PlayerList extends TabFeature implements TablistFormatManager {
 		onWorldChange(p, null, null);
 		if (TAB.getInstance().getFeatureManager().isFeatureEnabled(TabConstants.Feature.PIPELINE_INJECTION)) return;
 		for (TabPlayer all : TAB.getInstance().getOnlinePlayers()) {
-			p.sendCustomPacket(new PacketPlayOutPlayerInfo(EnumPlayerInfoAction.UPDATE_DISPLAY_NAME, new PlayerInfoData(getTablistUUID(all, p), getTabFormat(all, p, false))), this);
+			if (p.getVersion().getMinorVersion() >= 8) p.sendCustomPacket(new PacketPlayOutPlayerInfo(EnumPlayerInfoAction.UPDATE_DISPLAY_NAME,
+					new PlayerInfoData(getTablistUUID(all, p), getTabFormat(all, p, false))), this);
+			if (all.getVersion().getMinorVersion() >= 8) all.sendCustomPacket(new PacketPlayOutPlayerInfo(EnumPlayerInfoAction.UPDATE_DISPLAY_NAME,
+					new PlayerInfoData(getTablistUUID(p, all), getTabFormat(p, all, false))), this);
 		}
 	}
 	
@@ -113,12 +116,6 @@ public class PlayerList extends TabFeature implements TablistFormatManager {
 			updateProperties(refreshed);
 			refresh = true;
 		} else {
-			if (refreshed.getProperty(TabConstants.Property.TABPREFIX) == null) {
-				//this makes absolutely no sense, and I am not able to reproduce it myself
-				TAB.getInstance().getErrorManager().printError("Tablist formatting data not present for " + refreshed.getName() + " when refreshing, loading again.", new Exception());
-				updateProperties(refreshed);
-				return;
-			}
 			boolean prefix = refreshed.getProperty(TabConstants.Property.TABPREFIX).update();
 			boolean name = refreshed.getProperty(TabConstants.Property.CUSTOMTABNAME).update();
 			boolean suffix = refreshed.getProperty(TabConstants.Property.TABSUFFIX).update();
@@ -156,7 +153,7 @@ public class PlayerList extends TabFeature implements TablistFormatManager {
 		r.run();
 		//add packet might be sent after tab's refresh packet, resending again when anti-override is disabled
 		if (!antiOverrideTabList || !TAB.getInstance().getFeatureManager().isFeatureEnabled(TabConstants.Feature.PIPELINE_INJECTION))
-			TAB.getInstance().getCPUManager().runTaskLater(100, "processing PlayerJoinEvent", this, TabConstants.CpuUsageCategory.PLAYER_JOIN, r);
+			TAB.getInstance().getCPUManager().runTaskLater(300, "processing PlayerJoinEvent", this, TabConstants.CpuUsageCategory.PLAYER_JOIN, r);
 	}
 	
 	protected UUID getTablistUUID(TabPlayer p, TabPlayer viewer) {

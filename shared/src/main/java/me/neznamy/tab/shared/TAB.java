@@ -144,7 +144,7 @@ public class TAB extends TabAPI {
 	public String load() {
 		try {
 			long time = System.currentTimeMillis();
-			this.errorManager = new ErrorManager(this);
+			this.errorManager = new ErrorManager();
 			cpu = new CpuManager(errorManager);
 			featureManager = new FeatureManagerImpl();
 			configuration = new Configs(this);
@@ -158,19 +158,19 @@ public class TAB extends TabAPI {
 			command = new TabCommand(this);
 			featureManager.load();
 			for (TabPlayer p : players) ((ITabPlayer)p).markAsLoaded(false);
-			errorManager.printConsoleWarnCount();
-			print('a', "Enabled in " + (System.currentTimeMillis()-time) + "ms");
+			cpu.enable();
 			if (eventBus != null) eventBus.fire(TabLoadEventImpl.getInstance());
 			platform.callLoadEvent();
 			disabled = false;
+			print('a', "Enabled in " + (System.currentTimeMillis()-time) + "ms");
 			return configuration.getMessages().getReloadSuccess();
 		} catch (YAMLException e) {
 			print('c', "Did not enable due to a broken configuration file.");
-			disabled = true;
+			kill();
 			return configuration.getReloadFailedMessage().replace("%file%", "-"); //recode soon
 		} catch (Exception e) {
 			errorManager.criticalError("Failed to enable. Did you just invent a new way to break the plugin by misconfiguring it?", e);
-			disabled = true;
+			kill();
 			return "&cFailed to enable due to an internal plugin error. Check console for more info.";
 		}
 	}
@@ -180,18 +180,22 @@ public class TAB extends TabAPI {
 	 */
 	public void unload() {
 		if (disabled) return;
-		disabled = true;
 		try {
 			long time = System.currentTimeMillis();
-			cpu.cancelAllTasks();
 			if (configuration.getMysql() != null) configuration.getMysql().closeConnection();
 			featureManager.unload();
 			platform.sendConsoleMessage("&a[TAB] Disabled in " + (System.currentTimeMillis()-time) + "ms", true);
 		} catch (Exception e) {
 			errorManager.criticalError("Failed to disable", e);
 		}
+		kill();
+	}
+
+	private void kill() {
+		disabled = true;
 		data.clear();
 		players = new TabPlayer[0];
+		cpu.cancelAllTasks();
 	}
 
 	/**

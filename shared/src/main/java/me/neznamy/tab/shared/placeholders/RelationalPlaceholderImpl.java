@@ -37,7 +37,7 @@ public class RelationalPlaceholderImpl extends TabPlaceholder implements Relatio
 	 * @param target - target who is the text displayed on
 	 * @return true if value changed, false if not
 	 */
-	public synchronized boolean update(TabPlayer viewer, TabPlayer target) {
+	public boolean update(TabPlayer viewer, TabPlayer target) {
 		String newValue = getReplacements().findReplacement(String.valueOf(request(viewer, target)));
 		if (!lastValues.computeIfAbsent(viewer, v -> new WeakHashMap<>()).containsKey(target) || !lastValues.get(viewer).get(target).equals(newValue)) {
 			lastValues.get(viewer).put(target, newValue);
@@ -56,7 +56,14 @@ public class RelationalPlaceholderImpl extends TabPlaceholder implements Relatio
 		if (!lastValues.computeIfAbsent(viewer, v -> new WeakHashMap<>()).containsKey(target)) update(viewer, target);
 		return setPlaceholders(replacements.findReplacement(EnumChatFormat.color(lastValues.get(viewer).get(target))), target);
 	}
-	
+
+	@Override
+	public void updateFromNested(TabPlayer player) {
+		for (TabPlayer all : TAB.getInstance().getOnlinePlayers()) {
+			updateValue(player, all, request(player, all), true);
+		}
+	}
+
 	@Override
 	public String getLastValue(TabPlayer p) {
 		return identifier;
@@ -77,10 +84,13 @@ public class RelationalPlaceholderImpl extends TabPlaceholder implements Relatio
 
 	@Override
 	public void updateValue(TabPlayer viewer, TabPlayer target, Object value) {
+		updateValue(viewer, target, value, false);
+	}
+
+	private void updateValue(TabPlayer viewer, TabPlayer target, Object value, boolean force) {
 		String s = getReplacements().findReplacement(String.valueOf(value));
-		if (lastValues.computeIfAbsent(viewer, v -> new WeakHashMap<>()).containsKey(target) && lastValues.get(viewer).get(target).equals(s)) return;
+		if (lastValues.computeIfAbsent(viewer, v -> new WeakHashMap<>()).containsKey(target) && lastValues.get(viewer).get(target).equals(s) && !force) return;
 		lastValues.get(viewer).put(target, s);
-		if (!viewer.isLoaded() || !target.isLoaded()) return;
 		Set<TabFeature> usage = TAB.getInstance().getPlaceholderManager().getPlaceholderUsage().get(identifier);
 		if (usage == null) return;
 		for (TabFeature f : usage) {
@@ -89,5 +99,7 @@ public class RelationalPlaceholderImpl extends TabPlaceholder implements Relatio
 			f.refresh(target, true);
 			TAB.getInstance().getCPUManager().addTime(f.getFeatureName(), f.getRefreshDisplayName(), System.nanoTime()-time);
 		}
+		parents.stream().map(identifier -> TAB.getInstance().getPlaceholderManager().getPlaceholder(identifier)).forEach(placeholder -> placeholder.updateFromNested(viewer));
+		parents.stream().map(identifier -> TAB.getInstance().getPlaceholderManager().getPlaceholder(identifier)).forEach(placeholder -> placeholder.updateFromNested(target));
 	}
 }

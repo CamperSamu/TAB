@@ -27,6 +27,7 @@ public class ServerPlaceholderImpl extends TabPlaceholder implements ServerPlace
 		super(identifier, refresh);
 		if (identifier.startsWith("%rel_")) throw new IllegalArgumentException("\"rel_\" is reserved for relational placeholder identifiers");
 		this.supplier = supplier;
+		update();
 	}
 	
 	/**
@@ -49,8 +50,12 @@ public class ServerPlaceholderImpl extends TabPlaceholder implements ServerPlace
 	}
 
 	@Override
+	public void updateFromNested(TabPlayer player) {
+		updateValue(request(), true);
+	}
+
+	@Override
 	public String getLastValue(TabPlayer p) {
-		if (lastValue == null) update();
 		return lastValue;
 	}
 
@@ -70,18 +75,22 @@ public class ServerPlaceholderImpl extends TabPlaceholder implements ServerPlace
 
 	@Override
 	public void updateValue(Object value) {
+		updateValue(value, false);
+	}
+
+	private void updateValue(Object value, boolean force) {
 		String s = getReplacements().findReplacement(String.valueOf(value));
-		if (s.equals(lastValue)) return;
+		if (s.equals(lastValue) && !force) return;
 		lastValue = s;
 		Set<TabFeature> usage = TAB.getInstance().getPlaceholderManager().getPlaceholderUsage().get(identifier);
 		if (usage == null) return;
 		for (TabPlayer player : TAB.getInstance().getOnlinePlayers()) {
-			if (!player.isLoaded()) continue;
 			for (TabFeature f : usage) {
 				long time = System.nanoTime();
 				f.refresh(player, false);
 				TAB.getInstance().getCPUManager().addTime(f.getFeatureName(), f.getRefreshDisplayName(), System.nanoTime()-time);
 			}
 		}
+		parents.stream().map(identifier -> TAB.getInstance().getPlaceholderManager().getPlaceholder(identifier)).forEach(placeholder -> placeholder.updateFromNested(null));
 	}
 }

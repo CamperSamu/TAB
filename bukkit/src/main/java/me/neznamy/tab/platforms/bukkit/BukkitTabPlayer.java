@@ -103,12 +103,10 @@ public class BukkitTabPlayer extends ITabPlayer {
 	
 	private void handle(PacketPlayOutBoss packet) {
 		BossBar bar = bossBars.get(packet.getId());
-		if (bar == null && packet.getOperation() != PacketPlayOutBoss.Action.ADD) return; //no idea how
-		switch (packet.getOperation()) {
-		case ADD:
+		if (packet.getOperation() == PacketPlayOutBoss.Action.ADD) {
 			if (bossBars.containsKey(packet.getId())) return;
-			bar = Bukkit.createBossBar(RGBUtils.getInstance().convertToBukkitFormat(packet.getName(), getVersion().getMinorVersion() >= 16 && TAB.getInstance().getServerVersion().getMinorVersion() >= 16), 
-					BarColor.valueOf(packet.getColor().name()), 
+			bar = Bukkit.createBossBar(RGBUtils.getInstance().convertToBukkitFormat(packet.getName(), getVersion().getMinorVersion() >= 16 && TAB.getInstance().getServerVersion().getMinorVersion() >= 16),
+					BarColor.valueOf(packet.getColor().name()),
 					BarStyle.valueOf(packet.getOverlay().getBukkitName()));
 			if (packet.isCreateWorldFog()) bar.addFlag(BarFlag.CREATE_FOG);
 			if (packet.isDarkenScreen()) bar.addFlag(BarFlag.DARKEN_SKY);
@@ -116,7 +114,10 @@ public class BukkitTabPlayer extends ITabPlayer {
 			bar.setProgress(packet.getPct());
 			bossBars.put(packet.getId(), bar);
 			bar.addPlayer(getPlayer());
-			break;
+			return;
+		}
+		if (bar == null) return; //no idea how
+		switch (packet.getOperation()) {
 		case REMOVE:
 			bar.removePlayer(getPlayer());
 			bossBars.remove(packet.getId());
@@ -216,7 +217,7 @@ public class BukkitTabPlayer extends ITabPlayer {
 		try {
 			if (!((BukkitPlatform)TAB.getInstance().getPlatform()).isLibsDisguisesEnabled()) return false;
 			return DisguiseAPI.isDisguised(getPlayer());
-		} catch (NoClassDefFoundError | ExceptionInInitializerError e) {
+		} catch (LinkageError e) {
 			//java.lang.NoClassDefFoundError: Could not initialize class me.libraryaddict.disguise.DisguiseAPI
 			TAB.getInstance().getErrorManager().printError("Failed to check disguise status using LibsDisguises", e);
 			((BukkitPlatform)TAB.getInstance().getPlatform()).setLibsDisguisesEnabled(false);

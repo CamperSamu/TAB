@@ -139,6 +139,7 @@ public class FeatureManagerImpl implements FeatureManager {
 			long time = System.nanoTime();
 			f.onJoin(connectedPlayer);
 			TAB.getInstance().getCPUManager().addTime(f, TabConstants.CpuUsageCategory.PLAYER_JOIN, System.nanoTime()-time);
+			TAB.getInstance().debug("Feature " + f.getClass().getSimpleName() + " processed player join in " + (System.nanoTime()-time)/1000000 + "ms");
 		}
 		((ITabPlayer)connectedPlayer).markAsLoaded(true);
 		TAB.getInstance().debug("Player join of " + connectedPlayer.getName() + " processed in " + (System.currentTimeMillis()-millis) + "ms");
@@ -156,10 +157,7 @@ public class FeatureManagerImpl implements FeatureManager {
 	 */
 	public void onWorldChange(UUID playerUUID, String to) {
 		TabPlayer changed = TAB.getInstance().getPlayer(playerUUID);
-		if (changed == null || !changed.isLoaded()) {
-			TAB.getInstance().getCPUManager().runTaskLater(100, "processing delayed world/server switch", "Other", "Player world switch", () -> onWorldChange(playerUUID, to));
-			return;
-		}
+		if (changed == null) return;
 		String from = changed.getWorld();
 		((ITabPlayer)changed).setWorld(to);
 		for (TabFeature f : values) {
@@ -184,6 +182,7 @@ public class FeatureManagerImpl implements FeatureManager {
 		String from = changed.getServer();
 		((ITabPlayer)changed).setServer(to);
 		for (TabFeature f : values) {
+			if (!f.overridesMethod("onServerChange")) continue;
 			long time = System.nanoTime();
 			f.onServerChange(changed, from, to);
 			TAB.getInstance().getCPUManager().addTime(f, TabConstants.CpuUsageCategory.SERVER_SWITCH, System.nanoTime()-time);
