@@ -6,7 +6,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import me.neznamy.tab.api.TabFeature;
 import me.neznamy.tab.api.TabPlayer;
-import me.neznamy.tab.api.util.Preconditions;
 import me.neznamy.tab.platforms.velocity.storage.VelocityPacketStorage;
 import me.neznamy.tab.shared.TAB;
 import me.neznamy.tab.shared.TabConstants;
@@ -90,8 +89,9 @@ public class VelocityPipelineInjector extends PipelineInjector {
 
         /**
          * Removes all real players from packet if the packet doesn't come from TAB
-         * @param packet - packet to modify
+         * @param packetScoreboardTeam - packet to modify
          */
+        @SuppressWarnings("unchecked")
         private void modifyPlayers(Object packetScoreboardTeam) throws ReflectiveOperationException {
             final byte mode = (byte) vps.ScoreboardTeam_getMode.invoke(packetScoreboardTeam);
             if (mode == 1 || mode == 2 || mode == 4) return;
