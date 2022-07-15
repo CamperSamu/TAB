@@ -1,6 +1,7 @@
 ## Fork
 This fork adds back packet support to Velocity. This fork is unofficial and is in no way affiliated, endorsed, or maintained by NEZNAMY. Use at your own risk!  
 Requires [VelocityPacketInjector](https://github.com/NovaMC/VelocityPacketInjector) plugin on your proxy to work!
+This fork will only work on Velocity, building for BungeeCord and Bukkit is disabled!
 
 # About
 TAB aims to be a superior all-in-one minecraft plugin for displaying information that outperforms all 
